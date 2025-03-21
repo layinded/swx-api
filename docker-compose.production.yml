@@ -1,0 +1,150 @@
+services:
+
+  traefik:
+    image: traefik:3.0
+    restart: always
+    ports:
+      - "80:80"    # HTTP
+      - "443:443"  # HTTPS
+    networks:
+      - traefik-public
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Read-only for security
+      - traefik-public-certificates:/certificates
+    command:
+      - --providers.docker
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+      - --certificatesresolvers.le.acme.email=${EMAIL}
+      - --certificatesresolvers.le.acme.storage=/certificates/acme.json
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --accesslog
+      - --log
+      - --log.level=DEBUG
+      - --api
+      - --api.dashboard=true
+      - --api.insecure=false
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      # Middleware to force HTTPS
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+      # Traefik Dashboard
+      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.traefik-dashboard-http.entrypoints=http
+      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
+      - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.traefik-dashboard-https.entrypoints=https
+      - traefik.http.routers.traefik-dashboard-https.tls=true
+      - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
+      - traefik.http.routers.traefik-dashboard-https.service=api@internal
+      # Basic Auth for Dashboard
+      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME}:${HASHED_PASSWORD}
+      - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
+
+  db:
+    image: postgres:15
+    restart: always
+    networks:
+      - default
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    volumes:
+      - app-db-data:/var/lib/postgresql/data/pgdata
+    env_file:
+      - .env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+
+  adminer:
+    image: adminer
+    restart: always
+    networks:
+      - traefik-public
+      - default
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - ADMINER_DESIGN=dracula
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.routers.adminer-http.rule=Host(`adminer.${DOMAIN}`)
+      - traefik.http.routers.adminer-http.entrypoints=http
+      - traefik.http.routers.adminer-http.middlewares=https-redirect
+      - traefik.http.routers.adminer-https.rule=Host(`adminer.${DOMAIN}`)
+      - traefik.http.routers.adminer-https.entrypoints=https
+      - traefik.http.routers.adminer-https.tls=true
+      - traefik.http.routers.adminer-https.tls.certresolver=le
+      - traefik.http.services.adminer.loadbalancer.server.port=8080
+
+  swx-api:
+    image: "swx-api:latest"
+    restart: always
+    networks:
+      - traefik-public
+      - default
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - SECRET_KEY=${SECRET_KEY}
+      - FIRST_SUPERUSER=${FIRST_SUPERUSER}
+      - FIRST_SUPERUSER_PASSWORD=${FIRST_SUPERUSER_PASSWORD}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
+      - DOCKERIZED=true
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SENTRY_DSN=${SENTRY_DSN}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - bash scripts/prestart.sh
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/utils/health-check" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.services.swx-api.loadbalancer.server.port=8000
+      - traefik.http.routers.swx-api-http.rule=Host(`api.${DOMAIN}`)
+      - traefik.http.routers.swx-api-http.entrypoints=http
+      - traefik.http.routers.swx-api-http.middlewares=https-redirect
+      - traefik.http.routers.swx-api-https.rule=Host(`api.${DOMAIN}`)
+      - traefik.http.routers.swx-api-https.entrypoints=https
+      - traefik.http.routers.swx-api-https.tls=true
+      - traefik.http.routers.swx-api-https.tls.certresolver=le
+
+volumes:
+  app-db-data:
+  traefik-public-certificates:
+
+networks:
+  traefik-public:
+    external: true

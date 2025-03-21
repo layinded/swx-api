@@ -1,0 +1,67 @@
+services:
+  traefik:
+    image: traefik:3.0
+    restart: always
+    ports:
+      - "80:80"    # HTTP
+      - "443:443"  # HTTPS
+    labels:
+      # ✅ Enable Traefik
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+
+      # ✅ Define Traefik Dashboard routing (HTTP → HTTPS)
+      - traefik.http.routers.traefik-dashboard-http.entrypoints=http
+      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
+
+      # ✅ Define Traefik Dashboard routing (HTTPS)
+      - traefik.http.routers.traefik-dashboard-https.entrypoints=https
+      - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.traefik-dashboard-https.tls=true
+      - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
+      - traefik.http.routers.traefik-dashboard-https.service=api@internal
+
+      # ✅ Middleware to enforce HTTPS
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+
+      # ✅ Enable Basic Auth for dashboard access
+      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME}:${HASHED_PASSWORD}
+      - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
+
+    volumes:
+      # ✅ Allow Traefik to access Docker services (read-only for security)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # ✅ Store SSL certificates
+      - traefik-public-certificates:/certificates
+
+    command:
+      # ✅ Enable Docker provider
+      - --providers.docker
+      - --providers.docker.exposedbydefault=false
+      # ✅ Define HTTP & HTTPS entrypoints
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+      # ✅ Enable Let's Encrypt TLS Challenge
+      - --certificatesresolvers.le.acme.email=${EMAIL}
+      - --certificatesresolvers.le.acme.storage=/certificates/acme.json
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      # ✅ Enable access logs & error logs
+      - --accesslog
+      - --log
+      - --log.level=DEBUG
+      # ✅ Enable Traefik API & Dashboard
+      - --api
+      - --api.dashboard=true
+      - --api.insecure=false
+
+    networks:
+      - traefik-public
+
+volumes:
+  traefik-public-certificates:
+
+networks:
+  traefik-public:
+    external: true

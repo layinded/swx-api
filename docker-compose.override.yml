@@ -1,0 +1,95 @@
+services:
+
+  proxy:
+    image: traefik:3.0
+    restart: always
+    ports:
+      - "80:80"
+      - "8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - --providers.docker
+      - --providers.docker.constraints=Label(`traefik.constraint-label`, `traefik-public`)
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+      - --accesslog
+      - --log
+      - --log.level=DEBUG
+      - --api
+      - --api.insecure=true
+    labels:
+      - traefik.enable=true
+      - traefik.constraint-label=traefik-public
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+    networks:
+      - traefik-public
+      - default
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+  #    volumes:
+  #      - app-db-data:/var/lib/postgresql/data  # ✅ Ensure persistent database
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+  swx-api:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env  # ✅ Load environment variables from .env
+    ports:
+      - "8000:8000"
+    command:
+      - /app/.venv/bin/uvicorn
+      - swx_api.core.main:app  # ✅ Use correct module path if main.py is inside core/
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+    volumes:
+      - ./swx_api:/app/swx_api  # ✅ Ensures files created inside Docker appear on host
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./migrations:/app/migrations  # ✅ Ensures Alembic migrations persist
+    develop:
+      watch:
+        - path: ./swx_api
+          action: sync
+          target: /app/swx_api  # ✅ Ensure target is set
+          ignore:
+            - .venv
+        - path: pyproject.toml
+          action: rebuild
+          target: /app/pyproject.toml  # ✅ Add target for rebuild
+
+
+volumes:
+  app-db-data:
+
+networks:
+  traefik-public:
+    external: false
