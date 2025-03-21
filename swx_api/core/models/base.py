@@ -19,3 +19,6 @@ class Base(SQLModel):
     """
 
     __abstract__ = True
+    model_config = {
+        "arbitrary_types_allowed": True
+    }

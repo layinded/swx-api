@@ -186,3 +186,40 @@ def normalize_resource_names(raw_name: str, component_suffix: str) -> tuple[str,
         file_name = f"{base}_{component_suffix}"
         class_name = f"{to_pascal_case(base)}{to_pascal_case(component_suffix)}"
     return base, file_name, class_name
+
+
+def get_model_columns(model_cls):
+    """
+    Introspect a SQLModel (or SQLAlchemy) model to retrieve its columns.
+    Returns a list of tuples: (column_name, column_type)
+    """
+    columns = []
+    if hasattr(model_cls, "__table__"):
+        for col in model_cls.__table__.columns:
+            columns.append((col.key, str(col.type)))
+    return columns
+
+
+def format_columns_comment(columns):
+    """
+    Create a formatted comment string with model column information.
+    """
+    if not columns:
+        return "# No columns detected."
+    lines = ["# Detected columns:"]
+    for name, col_type in columns:
+        lines.append(f"#   - {name}: {col_type}")
+    return "\n".join(lines)
+
+
+def get_extra_schemas(prefix, module):
+    """
+    Scans the module for schema classes that start with the given prefix.
+    Returns a dict of detected schema classes mapped to action names.
+    """
+    extra = {}
+    for attr_name in dir(module):
+        if attr_name.startswith(prefix) and attr_name != prefix:
+            schema_action = attr_name[len(prefix):].lower()  # Extract method name
+            extra[schema_action] = attr_name
+    return extra
