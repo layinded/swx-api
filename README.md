@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-🚀-brightgreen)
-![License](https://img.shields.io/github/license/yourusername/swx-api)
+![License](https://img.shields.io/github/license/layinded/swx-api)
 ![Docker Ready](https://img.shields.io/badge/Docker-Ready-blue)
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-success)
 ![Made with ❤️](https://img.shields.io/badge/Made_with-%E2%9D%A4-red)
