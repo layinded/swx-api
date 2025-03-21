@@ -122,6 +122,3 @@ General development docs: [development.md](./development.md).
 
 This includes using Docker Compose, custom local domains, `.env` configurations, etc.
 
-## Release Notes
-
-Check the file [release.md](./release.md).
