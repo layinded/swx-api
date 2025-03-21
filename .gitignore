@@ -43,7 +43,7 @@ logs/
 __pycache__/
 cache/
 *.pid
-*.lock
+
 
 # Ignore test coverage files
 .coverage
