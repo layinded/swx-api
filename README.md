@@ -109,3 +109,19 @@ docker-compose up --build
 ```
 
 > This will spin up the app along with PostgreSQL using the provided `docker-compose.yml`.
+
+---
+
+## Deployment
+
+Deployment docs: [deployment.md](./deployment.md).
+
+## Development
+
+General development docs: [development.md](./development.md).
+
+This includes using Docker Compose, custom local domains, `.env` configurations, etc.
+
+## Release Notes
+
+Check the file [release.md](./release.md).
