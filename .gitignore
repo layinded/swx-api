@@ -37,7 +37,7 @@ logs/
 *.exe
 
 # Ignore database migrations
-migrations/
+
 
 # Ignore cache and temporary files
 __pycache__/
@@ -73,3 +73,6 @@ back/docker-compose.yml
 # Ignore queue & Redis files
 rq-worker.pid
 redis-data/
+
+
+.idea/*
