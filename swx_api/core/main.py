@@ -25,6 +25,7 @@ Exception Handling:
 import os
 from contextlib import asynccontextmanager
 
+from chainlit.utils import mount_chainlit
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -158,3 +159,4 @@ def read_root():
         dict: A welcome message.
     """
     return {"message": "Welcome to swX API 🚀"}
+mount_chainlit(app=app, target="scripts/chainlit_app.py", path="/chat")

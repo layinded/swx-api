@@ -27,6 +27,9 @@ dependencies = [
     "authlib>=1.4.0",  # OAuth authentication
     "itsdangerous>=2.2.0",  # Secure token generation
     "psutil",  # System process monitoring
+    "pgai[sqlalchemy]>=0.1.0",
+    "chainlit",
+    "asyncpg"
 ]
 
 [tool.uv]

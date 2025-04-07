@@ -19,9 +19,11 @@ Schemas:
 """
 
 import uuid
+from datetime import datetime
 from typing import Optional
 from pydantic import EmailStr
 from sqlalchemy import Column, String, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 from swx_api.core.models.base import Base
 
@@ -57,9 +59,12 @@ class User(UserBase, table=True):
         auth_provider (str): The authentication provider (default: 'local').
         provider_id (Optional[str]): External authentication provider ID.
         avatar_url (Optional[str]): URL to the user's profile picture.
+        identifier (str): Unique user identifier used by Chainlit.
+        metadata (dict): JSON metadata for custom attributes.
+        createdAt (str): Timestamp when the user was created.
     """
 
-    __tablename__ = "user"
+    __tablename__ = "users"
     __table_args__ = {"extend_existing": True}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -67,6 +72,15 @@ class User(UserBase, table=True):
     auth_provider: str = Field(default="local", max_length=50)
     provider_id: Optional[str] = Field(default=None, unique=True, max_length=255)
     avatar_url: Optional[str] = Field(default=None, max_length=500)
+
+    # Chainlit-required fields
+    identifier: Optional[str] = Field(default=None, unique=True, index=True)
+    user_metadata: dict = Field(
+        default_factory=dict,
+        sa_column=Column("metadata", JSONB, nullable=False, server_default='{}')
+    )
+
+    createdAt: Optional[str] = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 
 class UserCreate(SQLModel):

@@ -1,7 +1,7 @@
 services:
 
   db:
-    image: postgres:15
+    image: timescale/timescaledb-ha:pg17
     restart: always
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
@@ -10,7 +10,7 @@ services:
       start_period: 30s
       timeout: 10s
     volumes:
-      - app-db-data:/var/lib/postgresql/data/pgdata
+      - app-db-data:/home/postgres/pgdata/data
     env_file:
       - .env
     environment:
@@ -18,6 +18,18 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
+    command: [ "-c", "ai.ollama_host=http://host.docker.internal:11434" ]  # Uses local Ollama
+
+
+  vectorizer-worker:
+    image: timescale/pgai-vectorizer-worker:v0.7.0
+    restart: always
+    environment:
+      PGAI_VECTORIZER_WORKER_DB_URL: postgres://czu_user:changeme@db:5432/czu_db
+      OLLAMA_HOST: http://host.docker.internal:11434
+    command: [ "--poll-interval", "5s", "--log-level", "DEBUG" ]
+    depends_on:
+      - db
 
   adminer:
     image: adminer

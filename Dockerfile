@@ -46,6 +46,11 @@ ENV PATH="/app/.venv/bin:$PATH"
 COPY  swx_api /app/swx_api
 COPY  alembic.ini /app/alembic.ini
 COPY  migrations /app/migrations
+
+COPY  scripts /app/scripts
+
+COPY  .chainlit /app/.chainlit
+
 COPY .env /app/.env
 
 # ✅ Fix: Copy `pyproject.toml` to the final stage
