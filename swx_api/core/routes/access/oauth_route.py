@@ -72,10 +72,10 @@ def get_oauth_urls():
     """
     base_url = settings.BACKEND_HOST
     urls = {
-        "google": f"{base_url}/api/access/oauth/google"
+        "google": f"{base_url}/oauth/google"
         if social_settings.ENABLE_SOCIAL_LOGIN and social_settings.ENABLE_GOOGLE_LOGIN
         else None,
-        "facebook": f"{base_url}/api/access/oauth/facebook"
+        "facebook": f"{base_url}/oauth/facebook"
         if social_settings.ENABLE_SOCIAL_LOGIN and social_settings.ENABLE_FACEBOOK_LOGIN
         else None,
     }

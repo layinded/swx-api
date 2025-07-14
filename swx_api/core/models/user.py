@@ -19,7 +19,7 @@ Schemas:
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import EmailStr
 from sqlalchemy import Column, String, text
@@ -35,14 +35,12 @@ class UserBase(Base):
     Attributes:
         email (EmailStr): Unique email address.
         is_active (bool): Indicates if the user account is active.
-        is_superuser (bool): Determines if the user has admin privileges.
         full_name (Optional[str]): The user's full name (optional).
         preferred_language (str): Preferred language for UI interaction.
     """
 
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     is_active: bool = True
-    is_superuser: bool = False
     full_name: Optional[str] = Field(default=None, max_length=255)
     preferred_language: str = Field(
         default="en", sa_column=Column(String(5), server_default=text("'en'"))
@@ -64,7 +62,7 @@ class User(UserBase, table=True):
         createdAt (str): Timestamp when the user was created.
     """
 
-    __tablename__ = "users"
+    __tablename__ = "user"
     __table_args__ = {"extend_existing": True}
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -72,15 +70,8 @@ class User(UserBase, table=True):
     auth_provider: str = Field(default="local", max_length=50)
     provider_id: Optional[str] = Field(default=None, unique=True, max_length=255)
     avatar_url: Optional[str] = Field(default=None, max_length=500)
-
-    # Chainlit-required fields
-    identifier: Optional[str] = Field(default=None, unique=True, index=True)
-    user_metadata: dict = Field(
-        default_factory=dict,
-        sa_column=Column("metadata", JSONB, nullable=False, server_default='{}')
-    )
-
-    createdAt: Optional[str] = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # Defaults to current UTC time
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # Defaults to current UTC time
 
 
 class UserCreate(SQLModel):
@@ -98,7 +89,6 @@ class UserCreate(SQLModel):
     password: str = Field(min_length=8, max_length=40)
     full_name: Optional[str] = Field(default=None, max_length=255)
     preferred_language: Optional[str] = Field(default="en", max_length=3)
-    is_superuser: Optional[bool] = Field(default=True)
 
 
 class UserUpdate(SQLModel):

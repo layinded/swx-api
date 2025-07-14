@@ -1,8 +1,11 @@
 services:
 
   db:
-    image: timescale/timescaledb-ha:pg17
+    image: postgres:15
+    container_name: czdb
     restart: always
+    networks:
+      - default
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       interval: 10s
@@ -10,7 +13,7 @@ services:
       start_period: 30s
       timeout: 10s
     volumes:
-      - app-db-data:/home/postgres/pgdata/data
+      - app-db-data:/var/lib/postgresql/data/pgdata
     env_file:
       - .env
     environment:
@@ -18,21 +21,10 @@ services:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
-    command: [ "-c", "ai.ollama_host=http://host.docker.internal:11434" ]  # Uses local Ollama
-
-
-  vectorizer-worker:
-    image: timescale/pgai-vectorizer-worker:v0.7.0
-    restart: always
-    environment:
-      PGAI_VECTORIZER_WORKER_DB_URL: postgres://czu_user:changeme@db:5432/czu_db
-      OLLAMA_HOST: http://host.docker.internal:11434
-    command: [ "--poll-interval", "5s", "--log-level", "DEBUG" ]
-    depends_on:
-      - db
 
   adminer:
     image: adminer
+    container_name: czfbdbdashboard
     restart: always
     networks:
       - traefik-public
@@ -54,8 +46,9 @@ services:
       - traefik.http.routers.${STACK_NAME}-adminer-https.tls.certresolver=le
       - traefik.http.services.${STACK_NAME}-adminer.loadbalancer.server.port=8080
 
-  swx-api:
-    image: "swx-api:latest"  # Fixed the image reference
+  czfb:
+    container_name: czfbapi
+    image: "czfb"  # Fixed the image reference
     restart: always
     networks:
       - traefik-public

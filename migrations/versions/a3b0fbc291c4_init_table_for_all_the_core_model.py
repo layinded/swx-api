@@ -47,7 +47,7 @@ def upgrade():
     op.create_table('user',
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('is_superuser', sa.Boolean(), nullable=False),
+    # sa.Column('is_superuser', sa.Boolean(), nullable=False),
     sa.Column('full_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('preferred_language', sa.String(length=5), server_default=sa.text("'en'"), nullable=True),
     sa.Column('id', sa.Uuid(), nullable=False),
@@ -55,6 +55,8 @@ def upgrade():
     sa.Column('auth_provider', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
     sa.Column('provider_id', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('avatar_url', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('provider_id'),
     sa.UniqueConstraint('provider_id')

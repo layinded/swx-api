@@ -31,7 +31,7 @@ def seed_data() -> None:
     try:
         with SessionLocal() as session:
             logger.info("Starting database seeding...")
-            init_superuser(session)
+            # init_superuser(session)
             seed_languages(session)
             session.commit()
         logger.info("Initial data successfully created.")

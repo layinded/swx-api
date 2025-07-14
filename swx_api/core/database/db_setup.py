@@ -166,7 +166,7 @@ def setup_database() -> None:
 
     # Step 2: Initialize superuser and seed translations
     with SessionLocal() as session:
-        init_superuser(session)
+        # init_superuser(session)
         seed_languages(session)
 
     logger.info("Database is ready and initialized!")

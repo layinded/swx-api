@@ -159,4 +159,3 @@ def read_root():
         dict: A welcome message.
     """
     return {"message": "Welcome to swX API 🚀"}
-mount_chainlit(app=app, target="scripts/chainlit_app.py", path="/chat")

@@ -49,14 +49,14 @@ COPY  migrations /app/migrations
 
 COPY  scripts /app/scripts
 
-COPY  .chainlit /app/.chainlit
+
 
 COPY .env /app/.env
 
-# ✅ Fix: Copy `pyproject.toml` to the final stage
+
 COPY pyproject.toml /app/
 
-# ✅ Correct Installation: Use `pip install .`
+
 RUN /app/.venv/bin/python -m pip install .
 
 # Expose FastAPI port
