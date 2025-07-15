@@ -20,11 +20,13 @@ Schemas:
 
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 from pydantic import EmailStr
 from sqlalchemy import Column, String, text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
+
+
 from swx_api.core.models.base import Base
 
 
@@ -72,6 +74,7 @@ class User(UserBase, table=True):
     avatar_url: Optional[str] = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # Defaults to current UTC time
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # Defaults to current UTC time
+
 
 
 class UserCreate(SQLModel):

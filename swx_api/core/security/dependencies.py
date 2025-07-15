@@ -30,7 +30,7 @@ from swx_api.core.models.user import User
 from swx_api.core.utils.language_helper import translate
 
 # OAuth2 Bearer token authentication setup
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=f"{settings.ROUTE_PREFIX}/access/auth")
+reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=f"{settings.ROUTE_PREFIX}/auth")
 TokenDep = Annotated[str, Depends(reusable_oauth2)]  # Type alias for token dependency
 
 
