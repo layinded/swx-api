@@ -1,11 +1,96 @@
-services:
+#services:
+#
+#  proxy:
+#    image: traefik:3.0
+#    restart: always
+#    ports:
+#      - "80:80"
+#      - "8090:8080"
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+#    command:
+#      - --providers.docker
+#      - --providers.docker.constraints=Label(`traefik.constraint-label`, `traefik-public`)
+#      - --providers.docker.exposedbydefault=false
+#      - --entrypoints.http.address=:80
+#      - --entrypoints.https.address=:443
+#      - --accesslog
+#      - --log
+#      - --log.level=DEBUG
+#      - --api
+#      - --api.insecure=true
+#    labels:
+#      - traefik.enable=true
+#      - traefik.constraint-label=traefik-public
+#      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+#    networks:
+#      - traefik-public
+#      - default
+#
+#  db:
+#    image: postgres:15
+#    restart: always
+#    ports:
+#      - "8085:8080"
+#
+#
+#  adminer:
+#    image: adminer
+#    restart: always
+#    ports:
+#      - "8086:8080"
+#
+#  czfb:
+#    restart: always
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    depends_on:
+#      db:
+#        condition: service_healthy
+#    env_file:
+#      - .env
+#    ports:
+#      - "8000:8000"
+#    command:
+#      - /app/.venv/bin/uvicorn
+#      - swx_api.core.main:app
+#      - --host
+#      - 0.0.0.0
+#      - --port
+#      - "8000"
+#      - --reload
+#    volumes:
+#      - ./swx_api:/app/swx_api
+#      - ./pyproject.toml:/app/pyproject.toml
+#      - ./migrations:/app/migrations
+#    develop:
+#      watch:
+#        - path: ./swx_api
+#          action: sync
+#          target: /app/swx_api
+#          ignore:
+#            - .venv
+#        - path: pyproject.toml
+#          action: rebuild
+#          target: /app/pyproject.toml
+#
+#
+#volumes:
+#  app-db-data:
+#
+#networks:
+#  traefik-public:
+#    external: false
 
+
+services:
   proxy:
     image: traefik:3.0
     restart: always
     ports:
       - "80:80"
-      - "8090:8080"
+      - "8090:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command:
@@ -28,15 +113,10 @@ services:
       - default
 
   db:
-    image: postgres:15
-    restart: always
     ports:
-      - "8085:8080"
-
+      - "8085:5432"  # Expose Postgres for local dev
 
   adminer:
-    image: adminer
-    restart: always
     ports:
       - "8086:8080"
 
@@ -48,6 +128,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      otp-serve:
+        condition: service_started
+      nominatim:
+        condition: service_started
     env_file:
       - .env
     ports:
@@ -62,22 +146,55 @@ services:
       - --reload
     volumes:
       - ./swx_api:/app/swx_api
-      - ./pyproject.toml:/app/pyproject.toml
+      - ./czfb_server:/app/czfb_server
+      - ./scripts:/app/scripts
       - ./migrations:/app/migrations
+      - ./pyproject.toml:/app/pyproject.toml
     develop:
       watch:
         - path: ./swx_api
           action: sync
           target: /app/swx_api
-          ignore:
-            - .venv
+        - path: ./czfb_server
+          action: sync
+          target: /app/czfb_server
+        - path: ./scripts
+          action: sync
+          target: /app/scripts
+        - path: ./migrations
+          action: sync
+          target: /app/migrations
         - path: pyproject.toml
           action: rebuild
           target: /app/pyproject.toml
 
+  otp-serve:
+    container_name: otp
+    image: opentripplanner/opentripplanner:latest
+    command: --load --serve
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./data/otp-data:/var/opentripplanner
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx8g
+
+  nominatim:
+    container_name: nominatim
+    image: mediagis/nominatim:4.4
+    restart: unless-stopped
+    ports:
+      - "8083:8080"
+    environment:
+      - NOMINATIM_PG_PASS=nominatim
+      - PBF_PATH=/nominatim-data/czech-republic-latest.osm.pbf
+    volumes:
+      - nominatim-data:/var/lib/postgresql/12/main
+      - ./data/nominatim-import:/nominatim-data
 
 volumes:
   app-db-data:
+  nominatim-data:
 
 networks:
   traefik-public:

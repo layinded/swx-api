@@ -31,4 +31,4 @@ main.add_command(lint, "lint")  # Linting & code checks
 
 
 if __name__ == "__main__":
-    main(prog_name="swx")  # ✅ CLI Entry Point
+    main(prog_name="swx")

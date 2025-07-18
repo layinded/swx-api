@@ -1,47 +1,65 @@
 [project]
-name = "swx-api"
+name = "czech-intelligence-fabric"
 version = "1.0.0"
-description = "A Laravel-style API-first FastAPI framework with OAuth, JWT, and modular structure."
+description = "A Laravel-style API-first FastAPI framework with OAuth, JWT, modular structure, and MCP integration."
 requires-python = ">=3.10,<4.0"
 
-# Core dependencies
 dependencies = [
-    "fastapi[standard]<1.0.0,>=0.114.2",  # FastAPI with standard extras
-    "uvicorn[standard]<1.0.0,>=0.23.0",  # ASGI server for FastAPI
-    "gunicorn<22.0.0,>=20.1.0",  # Production WSGI server
-    "sqlalchemy<3.0,>=2.0",  # SQL ORM
-    "sqlmodel<1.0.0,>=0.0.21",  # Pydantic + SQLAlchemy model integration
-    "python-multipart<1.0.0,>=0.0.7",  # Support for form data parsing
-    "email-validator<3.0.0.0,>=2.1.0.post1",  # Validate email addresses
-    "passlib[bcrypt]<2.0.0,>=1.7.4",  # Password hashing
-    "tenacity<9.0.0,>=8.2.3",  # Retry logic handling
-    "pydantic>2.0",  # Data validation and settings management
-    "jinja2<4.0.0,>=3.1.4",  # Templating engine
-    "alembic<2.0.0,>=1.12.1",  # Database migrations
-    "httpx<1.0.0,>=0.25.1",  # Async HTTP client
-    "psycopg[binary]<4.0.0,>=3.1.13",  # PostgreSQL driver
-    "bcrypt==4.0.1",  # Secure password hashing
-    "pydantic-settings<3.0.0,>=2.2.1",  # Configuration management
-    "sentry-sdk[fastapi]<2.0.0,>=1.40.6",  # Error tracking
-    "pyjwt<3.0.0,>=2.8.0",  # JWT authentication
-    "authlib>=1.4.0",  # OAuth authentication
-    "itsdangerous>=2.2.0",  # Secure token generation
-    "psutil",  # System process monitoring
-    "pgai[sqlalchemy]>=0.1.0",
-    "chainlit",
-    "asyncpg"
+    # FastAPI & ASGI
+    "fastapi[standard]<1.0.0,>=0.114.2",
+    "uvicorn[standard]<1.0.0,>=0.23.0",
+    "gunicorn<22.0.0,>=20.1.0",
+    # Database and ORM
+    "sqlalchemy<3.0,>=2.0",
+    "sqlmodel<1.0.0,>=0.0.21",
+    "alembic<2.0.0,>=1.12.1",
+    "asyncpg",
+    "psycopg[binary]<4.0.0,>=3.1.13",
+    # Pydantic (use >=2.11.7 to match FastMCP requirements)
+    "pydantic>=2.11.7",
+    "pydantic-core>=2.33.2",
+    "pydantic-settings<3.0.0,>=2.2.1",
+    # Auth & Security
+    "passlib[bcrypt]<2.0.0,>=1.7.4",
+    "bcrypt==4.0.1",
+    "pyjwt<3.0.0,>=2.8.0",
+    "authlib>=1.4.0",
+    "itsdangerous>=2.2.0",
+    # Email validation
+    "email-validator<3.0.0.0,>=2.1.0.post1",
+    # HTTP & SSE
+    "httpx<1.0.0,>=0.25.1",
+    "httpx-sse==0.4.1",
+    # Templating & Utils
+    "jinja2<4.0.0,>=3.1.4",
+    "python-multipart<1.0.0,>=0.0.7",
+    "psutil",
+    "tenacity<9.0.0,>=8.2.3",
+    # FastMCP & MCP
+    "fastmcp>=2.10.4",
+    "mcp>=1.11.0",
+    "openapi-pydantic==0.5.1",
+    # ngrok for tunneling
+    "ngrok>=1.4.0",
+    # Sentry
+    "sentry-sdk[fastapi]<2.0.0,>=1.40.6",
+    ##caching
+    "async-lru==2.0.5",
+    #other
+    "rapidfuzz==3.13.0",
+    "dateparser"
 ]
 
 [tool.uv]
-# Developer dependencies (only for development)
 dev-dependencies = [
-    "pytest<8.0.0,>=7.4.3",  # Testing framework
-    "mypy<2.0.0,>=1.8.0",  # Static type checker
-    "ruff<1.0.0,>=0.2.2",  # Linter & formatter
-    "black<24.0.0,>=23.12.0",  # Code formatter
-    "pre-commit<4.0.0,>=3.6.2",  # Pre-commit hooks
-    "types-passlib<2.0.0.0,>=1.7.7.20240106",  # Type hints for passlib
-    "coverage<8.0.0,>=7.4.3",  # Code coverage analysis
+    "pytest>=8.2.0,<9.0.0",
+    "pytest-asyncio==1.0.0",
+    "mypy<2.0.0,>=1.8.0",
+    "ruff<1.0.0,>=0.2.2",
+    "black<24.0.0,>=23.12.0",
+    "pre-commit<4.0.0,>=3.6.2",
+    "types-passlib<2.0.0.0,>=1.7.7.20240106",
+    "coverage<8.0.0,>=7.4.3",
 ]
 
 [build-system]
@@ -49,41 +67,36 @@ requires = ["hatchling", "uv"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-# Ensure correct package discovery
-packages = ["swx_api"]
+packages = [
+    "swx_api",
+    "czfb_server"
+]
 
 [tool.mypy]
-# Enforce strict type checking
 strict = true
 exclude = ["venv", ".venv", "migrations", "alembic"]
 
 [tool.ruff]
-# Set the target Python version
 target-version = "py310"
-# Ignore specific directories
 exclude = ["migrations", "alembic"]
 
 [tool.ruff.lint]
-# Enable specific linting rules
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # Pyflakes (detects logical errors)
-    "I",  # isort (import sorting)
-    "B",  # flake8-bugbear (common mistakes)
-    "C4",  # flake8-comprehensions (optimize comprehensions)
-    "UP",  # pyupgrade (keep syntax modern)
-    "ARG001",  # Detect unused arguments
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # Pyflakes
+    "I", # isort
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "ARG001", # unused arguments
 ]
-
-# Disable specific warnings that conflict with other tools or aren't relevant
 ignore = [
-    "E501",  # Ignore line length (handled by Black)
-    "B008",  # Function calls in argument defaults
-    "W191",  # Indentation contains tabs
-    "B904",  # Raising exceptions without `from e`
+    "E501", # line length
+    "B008", # function calls in argument defaults
+    "W191", # tabs
+    "B904", # exception chaining
 ]
 
 [project.scripts]
-# CLI entry point
 swx = "swx_api.core.cli.main:main"
