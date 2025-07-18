@@ -13,8 +13,8 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
     Middleware to enforce API key authentication.
     """
     async def dispatch(self, request: Request, call_next):
-        x_api_key = request.headers.get("x_api_key")
-        if not x_api_key:
+        api_key = request.headers.get("x_api_key")
+        if not api_key:
             return JSONResponse(
                 status_code=400,
                 content={"error": {"code": 400, "message": "Missing API Key"}}
@@ -25,7 +25,7 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
         try:
             await ApiKeysController.get_valid_api_key(
                 db=db,
-                x_api_key=x_api_key
+                api_key=api_key
             )
         except HTTPException as e:
             return JSONResponse(

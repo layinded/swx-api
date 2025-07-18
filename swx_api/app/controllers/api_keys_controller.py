@@ -20,13 +20,13 @@ class ApiKeysController:
     @staticmethod
     async def get_valid_api_key(
             db: SessionDep,
-            x_api_key: str = Header(..., description="API Key")
+            api_key: str = Header(..., description="API Key")
     ) -> None:
         """
         Dependency: validate API key and raise if invalid.
         Returns nothing (or you could return True).
         """
-        success, result = ApiKeysService.validate_and_increment_usage(db, x_api_key)
+        success, result = ApiKeysService.validate_and_increment_usage(db, api_key)
 
         if not success:
             logger.warning("API Key validation failed: %s", result)
