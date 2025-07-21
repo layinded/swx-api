@@ -2,7 +2,7 @@
 import uuid
 from typing import List
 
-from fastapi import HTTPException, Request, Header, Depends
+from fastapi import HTTPException, Request, Depends
 from swx_api.app.models.api_keys import (
     ApiKeysCreate,
     ApiKeysUpdate,
@@ -20,7 +20,7 @@ class ApiKeysController:
     @staticmethod
     async def get_valid_api_key(
             db: SessionDep,
-            api_key: str = Header(..., description="API Key")
+            api_key: str
     ) -> None:
         """
         Dependency: validate API key and raise if invalid.

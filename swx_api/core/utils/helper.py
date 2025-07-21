@@ -22,6 +22,7 @@ Functions:
 import re
 import os
 import click
+from fastapi import Request, HTTPException
 
 
 def format_name(name: str) -> tuple[str, str]:
@@ -223,3 +224,12 @@ def get_extra_schemas(prefix, module):
             schema_action = attr_name[len(prefix):].lower()  # Extract method name
             extra[schema_action] = attr_name
     return extra
+
+
+def extract_api_key(request: Request) -> str:
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    token = auth.split(" ", 1)[1].strip()
+    return token

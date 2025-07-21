@@ -1,19 +1,22 @@
+from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 
 from swx_api.app.controllers.api_keys_controller import ApiKeysController
-from fastapi import HTTPException
-
 from swx_api.core.database.db import get_db
+from swx_api.core.utils.helper import extract_api_key
 
 
-class ApiKeyMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware to enforce API key authentication.
-    """
+class APIKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        api_key = request.headers.get("x_api_key")
+        try:
+            api_key = extract_api_key(request)
+        except HTTPException as e:
+            return JSONResponse(
+                status_code=e.status_code,
+                content={"error": {"code": e.status_code, "message": e.detail}}
+            )
+
         if not api_key:
             return JSONResponse(
                 status_code=400,
@@ -30,7 +33,7 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
         except HTTPException as e:
             return JSONResponse(
                 status_code=e.status_code,
-                content=e.detail
+                content={"error": {"code": e.status_code, "message": e.detail}}
             )
         except Exception:
             return JSONResponse(
@@ -44,5 +47,3 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
                 pass
 
         return await call_next(request)
-
-

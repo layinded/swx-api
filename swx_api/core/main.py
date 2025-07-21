@@ -188,9 +188,9 @@ loaded_modules = load_all_modules()
 mcp_transport_tools_app = mcp_transport_tools.http_app(path="/")
 
 # Attach the API key middleware ONLY to MCP
-from swx_api.app.middleware.api_key_middleware import ApiKeyMiddleware
+from swx_api.app.middleware.api_key_middleware import APIKeyMiddleware
 
-mcp_transport_tools_app.add_middleware(ApiKeyMiddleware)
+mcp_transport_tools_app.add_middleware(APIKeyMiddleware)
 
 
 # Combine lifespans
