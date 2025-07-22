@@ -28,6 +28,8 @@ class ApiKeysController:
         """
         success, result = ApiKeysService.validate_and_increment_usage(db, api_key)
 
+        print(f"[/debug] success: {success}, api_key_obj: {result}")
+
         if not success:
             logger.warning("API Key validation failed: %s", result)
             raise HTTPException(

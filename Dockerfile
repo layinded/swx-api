@@ -68,6 +68,7 @@
 
 # Stage 1: Build environment
 FROM python:3.10-slim AS builder
+ENV PYTHONPATH=/app
 
 WORKDIR /app/
 

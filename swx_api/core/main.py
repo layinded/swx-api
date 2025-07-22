@@ -171,6 +171,7 @@ import ngrok
 
 from czfb_server.tools.transport.mcp_instance import mcp_transport_tools
 from swx_api.app.config.settings import app_settings
+from swx_api.app.middleware.api_log_middleware import APILogMiddleware
 from swx_api.core.router import router
 from swx_api.core.utils.loader import load_middleware, load_all_modules
 from swx_api.core.background_task import start_cache_refresh
@@ -191,6 +192,7 @@ mcp_transport_tools_app = mcp_transport_tools.http_app(path="/")
 from swx_api.app.middleware.api_key_middleware import APIKeyMiddleware
 
 mcp_transport_tools_app.add_middleware(APIKeyMiddleware)
+mcp_transport_tools_app.add_middleware(APILogMiddleware)
 
 
 # Combine lifespans
