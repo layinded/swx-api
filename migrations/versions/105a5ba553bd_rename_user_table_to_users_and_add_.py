@@ -38,11 +38,11 @@ def upgrade():
     op.add_column('users', sa.Column('createdAt', sa.Text()))
 
     # Backfill identifier with email
-    op.execute("""
-            UPDATE users
-            SET identifier = email
-            WHERE identifier IS NULL;
-        """)
+    op.execute(text("""
+        UPDATE users
+        SET identifier = email
+        WHERE identifier IS NULL;
+    """))
 
 
 def downgrade():

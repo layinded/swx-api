@@ -1,7 +1,7 @@
 [project]
-name = "swx-api"
+name = "swx-core"
 version = "1.0.0"
-description = "A Laravel-style API-first FastAPI framework with OAuth, JWT, and modular structure."
+description = "A production-ready FastAPI framework with RBAC, OAuth, JWT, and modular structure."
 requires-python = ">=3.10,<4.0"
 
 # Core dependencies
@@ -28,8 +28,8 @@ dependencies = [
     "itsdangerous>=2.2.0",  # Secure token generation
     "psutil",  # System process monitoring
     "pgai[sqlalchemy]>=0.1.0",
-    "chainlit",
-    "asyncpg"
+    "asyncpg",
+    "redis[hiredis]>=5.0.0",  # Redis for rate limiting and caching
 ]
 
 [tool.uv]
@@ -50,7 +50,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 # Ensure correct package discovery
-packages = ["swx_api"]
+packages = ["swx_core"]
 
 [tool.mypy]
 # Enforce strict type checking
@@ -86,4 +86,4 @@ ignore = [
 
 [project.scripts]
 # CLI entry point
-swx = "swx_api.core.cli.main:main"
+swx = "swx_core.cli.main:main"

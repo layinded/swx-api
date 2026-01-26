@@ -56,7 +56,6 @@ def upgrade():
     sa.Column('provider_id', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('avatar_url', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('provider_id'),
     sa.UniqueConstraint('provider_id')
     )
     op.create_index(op.f('ix_user_email'), 'user', ['email'], unique=True)

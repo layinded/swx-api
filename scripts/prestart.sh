@@ -5,10 +5,7 @@ set -x  # Print commands before execution
 
 echo "Waiting for database to start..."
 
-# Run database setup
-python swx_api/core/database/db_setup.py
-
-# Run Alembic migrations
-alembic upgrade head
+# Run database setup (includes check_db_ready, alembic upgrade head, superuser, seed)
+python swx_core/database/db_setup.py
 
 echo "Database setup complete!"

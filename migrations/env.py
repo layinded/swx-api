@@ -16,8 +16,8 @@ fileConfig(config.config_file_name)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Import settings and the dynamic model loader.
-from swx_api.core.config.settings import settings  # Adjust this import as needed
-from swx_api.core.utils.model import load_all_models  # Ensure this loader imports all models
+from swx_core.config.settings import settings  # Adjust this import as needed
+from swx_core.utils.model import load_all_models  # Ensure this loader imports all models
 
 # Load models from both app.models and core.models so they register with SQLModel.metadata.
 load_all_models()
