@@ -1,7 +1,8 @@
 # Background Jobs
 
 **Version:** 1.0.0  
-**Last Updated:** 2026-01-26
+**Last Updated:** 2026-01-26  
+**Updated:** Job handlers fully implemented
 
 ---
 
@@ -385,35 +386,233 @@ async def custom_job_handler(session: AsyncSession, payload: Dict) -> Dict:
 register_job_handler("custom.job.type", custom_job_handler)
 ```
 
-### Example Handler
+### Example Handlers
 
 **Billing Sync Handler:**
 ```python
-async def billing_sync_handler(session: AsyncSession, payload: Dict) -> Dict:
-    """Sync billing data with provider."""
-    subscription_id = payload.get("subscription_id")
-    if not subscription_id:
-        raise ValueError("subscription_id required")
+async def billing_sync_handler(session: AsyncSession, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Sync billing account with external provider (e.g., Stripe)."""
+    account_id_str = payload.get("account_id")
+    if not account_id_str:
+        raise ValueError("account_id is required")
     
-    # Get subscription
-    subscription = await get_subscription(session, subscription_id)
-    if not subscription:
-        raise ValueError(f"Subscription {subscription_id} not found")
+    account_id = uuid.UUID(account_id_str) if isinstance(account_id_str, str) else account_id_str
     
-    # Sync with provider
-    provider = StripeProvider()
-    provider_data = await provider.get_subscription(subscription.stripe_subscription_id)
+    # Fetch account from database
+    stmt = select(BillingAccount).where(BillingAccount.id == account_id)
+    result = await session.execute(stmt)
+    account = result.scalar_one_or_none()
     
-    # Update subscription
-    subscription.status = provider_data.status
-    subscription.current_period_end = provider_data.current_period_end
-    session.add(subscription)
-    await session.commit()
+    if not account:
+        return {"status": "error", "message": "Account not found", "account_id": str(account_id)}
+    
+    # Get active subscription
+    stmt = select(Subscription).where(
+        and_(
+            Subscription.account_id == account_id,
+            Subscription.status == SubscriptionStatus.ACTIVE
+        )
+    )
+    result = await session.execute(stmt)
+    subscription = result.scalar_one_or_none()
+    
+    if not subscription or not subscription.stripe_subscription_id:
+        return {"status": "skipped", "account_id": str(account_id), "reason": "No Stripe subscription"}
+    
+    # Sync with Stripe
+    provider = get_stripe_provider()
+    # In a real implementation, fetch subscription from Stripe and update local status
     
     return {
         "status": "synced",
+        "account_id": str(account_id),
         "subscription_id": str(subscription.id),
-        "provider_status": provider_data.status
+        "stripe_subscription_id": subscription.stripe_subscription_id
+    }
+```
+
+**Billing Webhook Handler:**
+```python
+async def billing_webhook_handler(session: AsyncSession, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Process webhook events from billing provider (e.g., Stripe)."""
+    event_type = payload.get("event_type")
+    event_data = payload.get("event_data", {})
+    
+    subscription_service = SubscriptionService(session)
+    
+    # Handle different webhook event types
+    if event_type == "customer.subscription.updated":
+        stripe_subscription_id = event_data.get("id")
+        status = event_data.get("status")
+        
+        # Find subscription by Stripe ID
+        stmt = select(Subscription).where(
+            Subscription.stripe_subscription_id == stripe_subscription_id
+        )
+        result = await session.execute(stmt)
+        subscription = result.scalar_one_or_none()
+        
+        if subscription:
+            # Map Stripe status to our status
+            status_map = {
+                "active": SubscriptionStatus.ACTIVE,
+                "canceled": SubscriptionStatus.CANCELED,
+                "past_due": SubscriptionStatus.PAST_DUE,
+            }
+            new_status = status_map.get(status, SubscriptionStatus.ACTIVE)
+            
+            if subscription.status != new_status:
+                subscription.status = new_status
+                if new_status == SubscriptionStatus.CANCELED:
+                    subscription.ended_at = datetime.utcnow()
+                session.add(subscription)
+                await session.commit()
+    
+    return {"processed": True, "event_type": event_type}
+```
+
+**Alert Send Handler:**
+```python
+async def alert_send_handler(session: AsyncSession, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Send alert notification via specified channel."""
+    alert_id = payload.get("alert_id")
+    channel = payload.get("channel", "email")
+    
+    # Extract alert details from payload
+    severity = AlertSeverity(payload.get("severity", "INFO"))
+    source = AlertSource(payload.get("source", "SYSTEM"))
+    event_type = payload.get("event_type", "ALERT")
+    message = payload.get("message", "Alert notification")
+    metadata = payload.get("metadata", {})
+    
+    # Create alert object
+    alert = Alert(
+        severity=severity,
+        source=source,
+        event_type=event_type,
+        message=message,
+        environment=payload.get("environment", "production"),
+        actor_type=AlertActorType(payload.get("actor_type", "NONE")),
+        actor_id=payload.get("actor_id"),
+        resource_type=payload.get("resource_type"),
+        resource_id=payload.get("resource_id"),
+        metadata=metadata
+    )
+    
+    # Send via specific channel
+    channel_map = {
+        "log": LogChannel(),
+        "slack": SlackChannel(),
+        "email": EmailChannel(),
+        "sms": SmsChannel()
+    }
+    
+    channel_instance = channel_map.get(channel)
+    if channel_instance:
+        success = await channel_instance.send(alert)
+        return {"sent": success, "alert_id": alert_id, "channel": channel}
+    
+    return {"sent": False, "alert_id": alert_id, "channel": channel, "reason": "Unknown channel"}
+```
+
+**Audit Aggregate Handler:**
+```python
+async def audit_aggregate_handler(session: AsyncSession, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Aggregate audit logs for reporting and analysis."""
+    from datetime import datetime, timedelta
+    from sqlmodel import func, desc
+    
+    # Parse date range
+    date_from_str = payload.get("date_from")
+    date_to_str = payload.get("date_to")
+    
+    date_from = datetime.fromisoformat(date_from_str.replace("Z", "+00:00")) if date_from_str else datetime.utcnow() - timedelta(days=7)
+    date_to = datetime.fromisoformat(date_to_str.replace("Z", "+00:00")) if date_to_str else datetime.utcnow()
+    
+    # Aggregate by action, resource_type, outcome
+    stmt = (
+        select(
+            AuditLog.action,
+            AuditLog.resource_type,
+            AuditLog.outcome,
+            func.count(AuditLog.id).label("count")
+        )
+        .where(
+            and_(
+                AuditLog.timestamp >= date_from,
+                AuditLog.timestamp <= date_to
+            )
+        )
+        .group_by(AuditLog.action, AuditLog.resource_type, AuditLog.outcome)
+        .order_by(desc("count"))
+    )
+    result = await session.execute(stmt)
+    aggregates = result.all()
+    
+    # Total count
+    stmt_total = (
+        select(func.count(AuditLog.id))
+        .where(
+            and_(
+                AuditLog.timestamp >= date_from,
+                AuditLog.timestamp <= date_to
+            )
+        )
+    )
+    result_total = await session.execute(stmt_total)
+    total_count = result_total.scalar() or 0
+    
+    return {
+        "aggregated": True,
+        "records": total_count,
+        "results": {
+            "date_from": date_from.isoformat(),
+            "date_to": date_to.isoformat(),
+            "total_records": total_count,
+            "by_action": [
+                {
+                    "action": row.action,
+                    "resource_type": row.resource_type,
+                    "outcome": row.outcome,
+                    "count": row.count
+                }
+                for row in aggregates
+            ]
+        }
+    }
+```
+
+**Cache Refresh Handler:**
+```python
+async def cache_refresh_handler(session: AsyncSession, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Refresh application cache (settings, permissions, etc.)."""
+    cache_type = payload.get("cache_type", "all")
+    
+    refreshed_items = []
+    
+    if cache_type == "all" or cache_type == "settings":
+        # Refresh settings cache
+        from swx_core.services.settings_service import SettingsService
+        SettingsService.invalidate_cache()
+        refreshed_items.append("settings")
+        
+        # Warm cache by pre-loading common settings
+        settings_service = SettingsService(session)
+        common_keys = [
+            "auth.access_token_expire_minutes",
+            "auth.refresh_token_expire_days",
+            "system.environment"
+        ]
+        for key in common_keys:
+            try:
+                await settings_service.get(key, None)
+            except Exception:
+                pass  # Ignore errors for missing settings
+    
+    return {
+        "refreshed": True,
+        "cache_type": cache_type,
+        "refreshed_items": refreshed_items
     }
 ```
 

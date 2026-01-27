@@ -1,7 +1,8 @@
 # Extending SwX-API
 
 **Version:** 1.0.0  
-**Last Updated:** 2026-01-26
+**Last Updated:** 2026-01-26  
+**Updated:** CLI resource generation documented
 
 ---
 
@@ -171,6 +172,37 @@ __all__ = ["Product", "ProductCreate", "ProductUpdate", "ProductPublic"]
 ```
 
 ### Pattern 2: Adding New Routes
+
+**Option 1: Use CLI Generator (Recommended)**
+
+The `swx make:resource` command generates complete CRUD routes with authentication included:
+
+```bash
+swx make:resource product
+```
+
+**This generates:**
+- ✅ Model (with Base, Create, Update, Public schemas)
+- ✅ Repository (CRUD operations)
+- ✅ Service (business logic layer)
+- ✅ Controller (request handling)
+- ✅ Routes (with `UserDep` authentication included by default)
+
+**After generation, add RBAC or policies:**
+```python
+# swx_app/routes/product_route.py
+from swx_core.rbac.dependencies import require_permission
+
+@router.get("/", response_model=list[ProductPublic])
+async def list_products(
+    session: SessionDep,
+    current_user: UserDep,  # ✅ Already included by CLI
+    _permission: None = Depends(require_permission("product:read")),  # Add RBAC
+):
+    ...
+```
+
+**Option 2: Manual Route Creation**
 
 **Step 1: Create Repository**
 ```python

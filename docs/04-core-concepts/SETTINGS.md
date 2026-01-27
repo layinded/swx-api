@@ -1,7 +1,8 @@
 # Runtime Settings System
 
 **Version:** 1.0.0  
-**Last Updated:** 2026-01-26
+**Last Updated:** 2026-01-26  
+**Updated:** Policy context integration documented
 
 ---
 
@@ -272,6 +273,27 @@ await settings_crud_service.update_setting_service(
 
 **Examples:**
 - `policy.default_priority` - Default policy priority
+- `system.environment` - Environment name (used in policy context)
+
+**Policy Context Integration:**
+The policy engine automatically uses the `system.environment` setting for policy evaluation context:
+
+```python
+# Policy evaluation context includes environment from settings
+from swx_core.services.policy.dependencies import require_policy
+
+@router.get("/resource/{id}")
+async def get_resource(
+    id: UUID,
+    _policy: None = Depends(require_policy("resource:read", "resource", resource_id=id))
+):
+    # Policy context automatically includes:
+    # - environment: from settings.service.get_string("system.environment")
+    # - timestamp: current time
+    # - ip_address: from request
+    # - user_agent: from request headers
+    ...
+```
 
 ### General Settings
 

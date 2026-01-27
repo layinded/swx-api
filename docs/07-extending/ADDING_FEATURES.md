@@ -1,7 +1,8 @@
 # Adding Features
 
 **Version:** 1.0.0  
-**Last Updated:** 2026-01-26
+**Last Updated:** 2026-01-26  
+**Updated:** CLI resource generation includes authentication by default
 
 ---
 
@@ -217,6 +218,40 @@ async def delete_feature_controller(session: AsyncSession, feature_id: UUID) -> 
 
 ### Step 7: Create Routes
 
+**Option 1: Use CLI Generator (Recommended)**
+
+The `swx make:resource` command generates routes with authentication included by default:
+
+```bash
+swx make:resource feature
+```
+
+**Generated routes include:**
+- ✅ `UserDep` authentication on all routes
+- ✅ Basic CRUD operations
+- ✅ Pagination support
+- ✅ Type hints and documentation
+
+**After generation, add RBAC or policies:**
+```python
+# swx_app/routes/feature_route.py
+from swx_core.rbac.dependencies import require_permission
+from swx_core.services.policy.dependencies import require_policy
+
+@router.get("/", response_model=list[FeaturePublic])
+async def list_features(
+    session: SessionDep,
+    current_user: UserDep,  # ✅ Already included by CLI
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    _permission: None = Depends(require_permission("feature:read")),  # Add RBAC
+):
+    """List all features."""
+    return await feature_controller.list_features_controller(session, skip, limit)
+```
+
+**Option 2: Manual Route Creation**
+
 **Route Pattern:**
 ```python
 # swx_app/routes/feature_route.py
@@ -282,6 +317,8 @@ async def delete_feature(
     """Delete feature."""
     await feature_controller.delete_feature_controller(session, feature_id)
 ```
+
+**Note:** CLI-generated routes include `UserDep` authentication by default. You should add RBAC permissions or policies after generation for production use.
 
 ### Step 8: Add Permissions
 

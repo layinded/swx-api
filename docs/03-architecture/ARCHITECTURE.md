@@ -1,7 +1,8 @@
 # SwX-API Architecture
 
 **Version:** 1.0.0  
-**Last Updated:** 2026-01-26
+**Last Updated:** 2026-01-26  
+**Updated:** Policy evaluation example with real-world usage
 
 ---
 
@@ -257,9 +258,34 @@ async def delete_resource(id: str):
     ...
 ```
 
+**Real-world Example - User Profile Access:**
+```python
+# swx_core/routes/user/user_route.py
+@router.get("/{user_id}", response_model=UserPublic)
+async def read_user_by_id(
+    user_id: UUID,
+    session: SessionDep,
+    current_user: UserDep,
+    request: Request,
+    _policy: None = Depends(
+        require_policy(
+            action="user:read",
+            resource_type="user",
+            resource_id=user_id,
+            resource_owner_id=user_id
+        )
+    ),
+) -> Any:
+    """
+    Policy ensures user can only read their own profile
+    (unless they have admin permissions via policy).
+    """
+    return await get_user_by_id_service(session, str(user_id), current_user, request)
+```
+
 **Policy Flow:**
 1. Load applicable policies
-2. Evaluate policy conditions
+2. Evaluate policy conditions (includes environment from settings)
 3. Check policy effect (allow/deny)
 4. Grant or deny access
 

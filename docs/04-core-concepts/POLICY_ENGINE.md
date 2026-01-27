@@ -1,7 +1,8 @@
 # Policy Engine (ABAC)
 
 **Version:** 1.0.0  
-**Last Updated:** 2026-01-26
+**Last Updated:** 2026-01-26  
+**Updated:** Real-world policy examples added, environment from settings
 
 ---
 
@@ -524,6 +525,59 @@ async def update_team(
     # Policy evaluated automatically
     # Access granted if policy allows
     ...
+```
+
+**Real-world Example - User Profile Access:**
+```python
+# swx_core/routes/user/user_route.py
+from swx_core.services.policy.dependencies import require_policy
+
+@router.get("/{user_id}", response_model=UserPublic)
+async def read_user_by_id(
+    user_id: UUID,
+    session: SessionDep,
+    current_user: UserDep,
+    request: Request,
+    _policy: None = Depends(
+        require_policy(
+            action="user:read",
+            resource_type="user",
+            resource_id=user_id,
+            resource_owner_id=user_id
+        )
+    ),
+) -> Any:
+    """
+    Retrieve user details by their unique ID.
+    
+    Policy ensures user can only read their own profile
+    (unless they have admin permissions via policy).
+    """
+    return await get_user_by_id_service(session, str(user_id), current_user, request)
+```
+
+**Before (Manual Check):**
+```python
+# ❌ Old approach - Manual check
+@router.get("/{user_id}")
+async def read_user_by_id(user_id: UUID, current_user: UserDep):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return await get_user_by_id_service(session, str(user_id), current_user)
+```
+
+**After (Policy-Based):**
+```python
+# ✅ New approach - Policy-based
+@router.get("/{user_id}")
+async def read_user_by_id(
+    user_id: UUID,
+    current_user: UserDep,
+    _policy: None = Depends(require_policy("user:read", "user", resource_id=user_id))
+):
+    # Policy automatically enforces access rules
+    # Supports complex conditions (ownership, team membership, etc.)
+    return await get_user_by_id_service(session, str(user_id), current_user)
 ```
 
 ### Manual Policy Evaluation
