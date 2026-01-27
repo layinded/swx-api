@@ -19,6 +19,8 @@ from swx_core.auth.admin.dependencies import AdminUserDep
 from swx_core.rbac.helpers import get_user_permissions, get_user_roles
 from swx_core.services.audit_logger import get_audit_logger, ActorType as AuditActorType, AuditOutcome
 from swx_core.services.policy.actor import ActorType as PolicyActorType
+from swx_core.services.settings_service import get_settings_service
+from swx_core.config.settings import settings as env_settings
 from swx_core.middleware.logging_middleware import logger
 from datetime import datetime
 
@@ -164,12 +166,19 @@ def require_policy(
             attributes=resource_attributes or {}
         )
         
+        # Get environment from settings (with fallback to env var)
+        settings_service = get_settings_service(session)
+        environment = await settings_service.get_string(
+            "system.environment",
+            default=env_settings.ENVIRONMENT or "local"
+        )
+        
         # Build context
         context = PolicyContext(
             timestamp=datetime.utcnow(),
             ip_address=request.client.host if request and request.client else None,
             user_agent=request.headers.get("user-agent") if request else None,
-            environment="local",  # TODO: Get from settings
+            environment=environment,
             request_id=request.headers.get("x-request-id", "") if request else ""
         )
         

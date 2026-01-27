@@ -95,30 +95,29 @@ class {controller_class}:
 {extra_controller_methods}
 """,
     "route": """{columns_comment}
-# SECURITY NOTE: This route template does NOT include authentication by default.
-# You MUST add authentication dependencies to protect your routes.
-# Example: Add `current_user: UserDep` or `admin_user: AdminUserDep` to route handlers.
-# For RBAC, use: `from swx_core.rbac.dependencies import require_permission`
+# SECURITY NOTE: Authentication is included by default but you should review and customize.
+# Add RBAC permissions using: `from swx_core.rbac.dependencies import require_permission`
+# Add policies using: `from swx_core.services.policy.dependencies import require_policy`
 
 import uuid
 from fastapi import APIRouter, Request, Depends, Query
 from swx_core.database.db import SessionDep
-# TODO: Add authentication dependency
-# from swx_core.auth.user.dependencies import UserDep
+from swx_core.auth.user.dependencies import UserDep
+# Optional: Add RBAC or policy dependencies
 # from swx_core.rbac.dependencies import require_permission
+# from swx_core.services.policy.dependencies import require_policy
 from {module_path}.controllers.{controller_file} import {controller_class}
 from {module_path}.models.{model_file} import {model_class}Create, {model_class}Update, {model_class}Public
 
 router = APIRouter(prefix="/{model_file}")
 
-# SECURITY WARNING: These routes are NOT protected by default.
-# Add authentication and authorization before using in production.
+# SECURITY: Routes are protected with UserDep authentication.
+# Review and add RBAC permissions or policies as needed for your use case.
 
 @router.get("/", response_model=list[{model_class}Public],
             summary="Get all {name_lower}",
             description="Retrieve all {name_lower} resources with optional pagination")
-def get_all(request: Request, db: SessionDep,
-            # TODO: Add authentication: current_user: UserDep,
+def get_all(request: Request, db: SessionDep, current_user: UserDep = Depends(),
             skip: int = Query(0, description="Number of items to skip"),
             limit: int = Query(100, description="Maximum number of items to return")):
     return {controller_class}.retrieve_all_{name_lower}_resources(request, db, skip=skip, limit=limit)
@@ -126,29 +125,25 @@ def get_all(request: Request, db: SessionDep,
 @router.get("/{{id}}", response_model={model_class}Public,
             summary="Get {name_lower} by ID",
             description="Retrieve a single {name_lower} resource by its unique identifier")
-def get_by_id(request: Request, id: uuid.UUID, db: SessionDep):
-    # TODO: Add authentication: current_user: UserDep,
+def get_by_id(request: Request, id: uuid.UUID, db: SessionDep, current_user: UserDep = Depends()):
     return {controller_class}.retrieve_{name_lower}_by_id(request, id, db)
 
 @router.post("/", response_model={model_class}Public, status_code=201,
              summary="Create new {name_lower}",
              description="Create a new {name_lower} resource")
-def create(request: Request, data: {model_class}Create, db: SessionDep):
-    # TODO: Add authentication: current_user: UserDep,
+def create(request: Request, data: {model_class}Create, db: SessionDep, current_user: UserDep = Depends()):
     return {controller_class}.create_new_{name_lower}(request, data, db)
 
 @router.put("/{{id}}", response_model={model_class}Public,
             summary="Update {name_lower}",
             description="Update an existing {name_lower} resource by ID")
-def update(request: Request, id: uuid.UUID, data: {model_class}Update, db: SessionDep):
-    # TODO: Add authentication: current_user: UserDep,
+def update(request: Request, id: uuid.UUID, data: {model_class}Update, db: SessionDep, current_user: UserDep = Depends()):
     return {controller_class}.update_existing_{name_lower}(request, id, data, db)
 
 @router.delete("/{{id}}", status_code=204,
                summary="Delete {name_lower}",
                description="Delete an existing {name_lower} resource by ID")
-def delete(request: Request, id: uuid.UUID, db: SessionDep):
-    # TODO: Add authentication: current_user: UserDep,
+def delete(request: Request, id: uuid.UUID, db: SessionDep, current_user: UserDep = Depends()):
     return {controller_class}.delete_existing_{name_lower}(request, id, db)
 {extra_route_endpoints}
 """,

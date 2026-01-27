@@ -29,6 +29,7 @@ from swx_core.services.user_service import (
     update_password_service,
     delete_user_service,
 )
+from swx_core.services.policy.dependencies import require_policy
 from swx_core.utils.language_helper import translate
 
 # Define the router with a prefix for user profile-related operations
@@ -78,7 +79,12 @@ async def read_user_by_id(
     current_user: UserDep,
     request: Request,
     _policy: None = Depends(
-        lambda: None  # Placeholder - will be replaced with require_policy in next step
+        require_policy(
+            action="user:read",
+            resource_type="user",
+            resource_id=user_id,
+            resource_owner_id=user_id
+        )
     ),
 ) -> Any:
     """
@@ -96,15 +102,8 @@ async def read_user_by_id(
     Raises:
         HTTPException: If the authenticated user attempts to access another user's details.
     """
-    # TODO: Replace manual check with policy
-    # Example: _policy: None = Depends(require_policy(
-    #     action="user:read",
-    #     resource_type="user",
-    #     resource_id=user_id,
-    #     resource_owner_id=user_id
-    # ))
-    if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail=translate(request, "access_denied"))
+    # Policy evaluation ensures user can only read their own profile
+    # (unless they have admin permissions via policy)
     return await get_user_by_id_service(session, str(user_id), current_user, request)
 
 
